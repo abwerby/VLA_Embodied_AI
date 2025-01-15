@@ -1,8 +1,8 @@
-image_folder: "/export/home/werbya/VLA/data/clip3_frames"
-start_frame: 1630
-end_frame: 1650
+image_folder: "/export/home/werbya/VLA_Embodied_AI/data/clip3_frames"
+start_frame: 1600
+end_frame: 1700
 output: 
-  dir: "vqa_dataset"
+  dir: "captions"
   save_visualizations: False
 
 vlm_model:
@@ -25,6 +25,9 @@ detector_model:
     - "pile of rocks"
     - "pile of sand"
     - "Truck"
+    - "sand"
+    - "dirt"
+    - "rocks"
 
 hydra:
   run:

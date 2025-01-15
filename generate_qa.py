@@ -1,11 +1,5 @@
 import torch
 from transformers import pipeline
-
-
-
-
-
-
 import json
 from pathlib import Path
 from typing import Dict, List, Union
@@ -52,7 +46,15 @@ def parse_frame_analysis(json_path: Union[str, Path]) -> List[Dict[str, str]]:
                          Given the following frame description and object detections, generate a set of 3-5 \
                          question-answer pairs related to what the loader might do, or \
                          next steps to take (load, unload, go to pile). Your answers should be concise, factual, and revolve around \
-                         typical wheel-loader operations.
+                         typical wheel-loader operations.\n \
+                         Example planning questions based on the description:\n \
+                         if there is a pile of material at loc [x, y] and the loader unloaded, what is the loader likely to do next? \
+                              - go to the pile location [x, y]\n \
+                        if the loader is loaded and there is a truck at loc [x, y], what is the loader likely to do next? \
+                                - go to the truck location [x, y]\n \
+                        \n \
+                        step1: go to pile at loc [x, y], step2: load material, step3: go to truck at loc [x, y], step4: unload material\n \
+                        decide the next step for the loader based on the current state of the loader and the scene\n \
                          \n\n \
                          output format: make the question-answer pairs in JSON format, with the question as the key and the answer as the value."""
         

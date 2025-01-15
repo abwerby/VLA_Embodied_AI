@@ -2,3 +2,4 @@
 *.log
 data/
 model_cache/
+captions/
