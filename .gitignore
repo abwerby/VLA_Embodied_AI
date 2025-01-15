@@ -1,0 +1,4 @@
+*.hydra
+*.log
+data/
+model_cache/

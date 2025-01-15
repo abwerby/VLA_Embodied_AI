@@ -1,0 +1,33 @@
+image_folder: "/export/home/werbya/VLA/data/clip3_frames"
+start_frame: 1630
+end_frame: 1650
+output: 
+  dir: "vqa_dataset"
+  save_visualizations: False
+
+vlm_model:
+  name: "Salesforce/xgen-mm-phi3-mini-instruct-r-v1"
+  cache_dir: "model_cache"
+queries:
+  - "provide a detailed description of the scene"
+  - "Describe what is loader doing loading or unloading material?"
+  # - "is the loader interacting with a truck or not?"
+  - "What is the status of the loader bucket?"
+  - "Is the loader bucket up on the air or down on the ground?"
+  - "Is there a pile of dirt in front of the loader? is the loader interacting with it?"
+
+detector_model:
+  name: "google/owlvit-base-patch32"
+  cache_dir: "model_cache"
+  confidence_threshold: 0.1
+  target_classes: 
+    - "pile of dirt"
+    - "pile of rocks"
+    - "pile of sand"
+    - "Truck"
+
+hydra:
+  run:
+    dir: '.'    
+  sweep:
+    dir: '.'
