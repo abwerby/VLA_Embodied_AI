@@ -45,23 +45,15 @@ def parse_frame_analysis(json_path: Union[str, Path]) -> List[Dict[str, str]]:
         combined_description = " ".join(description_parts)
         
         # Create the system prompt
-        system_prompt = """You are an expert in construction site operations, specifically focusing on wheel loaders. \
-                         Given the following frame description and object detections, generate a set of 3-5 \
-                         question-answer pairs related to what the loader might do, or \
-                         next steps to take (load, unload, go to pile). Your answers should be concise, factual, and revolve around \
-                         typical wheel-loader operations.\n \
-                         Example planning questions based on the description:\n \
-                         if there is a pile of material at loc [x, y] and the loader unloaded, what is the loader likely to do next? \
-                              - go to the pile location [x, y]\n \
-                        if the loader is loaded and there is a truck at loc [x, y], what is the loader likely to do next? \
-                                - go to the truck location [x, y]\n \
-                        \n \
-                        step1: go to pile at loc [x, y], step2: load material, step3: go to truck at loc [x, y], step4: unload material\n \
-                        decide the next step for the loader based on the current state of the loader and the scene\n \
-                         \n\n \
-                         output format: make the question-answer pairs in JSON format, with the question as the key and the answer as the value.\
-                        Don't include the system prompt in the output, Don't write any Code, just write the question-answer pairs in JSON format.
-                            """
+        system_prompt = """
+                            You are an expert in construction site operations, specifically focusing on wheel loaders. \
+                            Given the following frame description and object detections, Given a scene caption of the operation \
+                            generate 2-3 question-answer pairs related to what the loader should do, or \
+                            next steps to take (load, unload, go to pile). Your answers should be concise, based only on the caption.\n\
+                            Answer of the question should be based on the current state of the loader and the scene\n \
+                            output format: make the question-answer pairs in JSON format, with the question as the key and the answer as the value.\
+                            Don't include the system prompt in the output, Don't write any Code, just write the question-answer pairs in JSON format.\n \
+                        """
         
         # Format messages for the LLM
         messages = [
@@ -98,9 +90,7 @@ def batch_process_analysis_files(directory_path: Union[str, Path]) -> Dict[str, 
         frame_name = json_file.stem.replace('_analysis', '')
         messages = parse_frame_analysis(json_file)
         if messages:
-            results[frame_name] = messages
-            logger.info(f"Successfully processed frame {frame_name}")
-    
+            results[frame_name] = messages    
     return results
 
 
@@ -120,19 +110,14 @@ def main(cfg: DictConfig):
     
     # Generate questions for each frame and save the results as JSON
     for frame_name, messages in all_frames.items():
-        for message in messages:
-            prompt = message['content']
-            response = pipe(prompt, max_length=cfg.generation.max_length)[0]['generated_text']
-            message['response'] = response
-            
+        response = pipe(messages, max_length=cfg.generation.max_length)[0]['generated_text'][-1]
         # Save the generated questions
         output_file = Path(cfg.data.output_dir) / Path(cfg.data.input_dir).name
         os.makedirs(output_file, exist_ok=True)
         output_file /= f"{frame_name}_questions.json"
-        # find the json part of the output response and write it to the output file
+        res = {"frame_name": frame_name, "captions": messages[1]['content'], "questions": response}
         with open(output_file, 'w') as f:
-            json.dump(messages, f, indent=1)
-        logger.info(f"Generated questions for frame {frame_name}. Saved to {output_file}")
+            json.dump(res, f, indent=4)
 
 if __name__ == "__main__":
     main()

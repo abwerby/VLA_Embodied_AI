@@ -5,7 +5,7 @@ model:
     
 data:
     input_dir: "/export/home/werbya/VLA_Embodied_AI/captions/clip3_frames"
-    output_dir: "/export/home/werbya/VLA_Embodied_AI/VAQ_dataset"
+    output_dir: "/export/home/werbya/VLA_Embodied_AI/VQA_dataset"
 generation:
     max_length: 1000
 
