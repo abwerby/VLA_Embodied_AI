@@ -1,0 +1,16 @@
+model:
+    name: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+    cache_dir: "model_cache"
+    dtype: "bfloat16"
+    
+data:
+    input_dir: "/export/home/werbya/VLA_Embodied_AI/captions/clip3_frames"
+    output_dir: "/export/home/werbya/VLA_Embodied_AI/VAQ_dataset"
+generation:
+    max_length: 1000
+
+hydra:
+  run:
+    dir: '.'    
+  sweep:
+    dir: '.'

@@ -1,9 +1,12 @@
 import torch
 from transformers import pipeline
 import json
+import os
 from pathlib import Path
 from typing import Dict, List, Union
 import logging
+import hydra
+from omegaconf import DictConfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -56,7 +59,9 @@ def parse_frame_analysis(json_path: Union[str, Path]) -> List[Dict[str, str]]:
                         step1: go to pile at loc [x, y], step2: load material, step3: go to truck at loc [x, y], step4: unload material\n \
                         decide the next step for the loader based on the current state of the loader and the scene\n \
                          \n\n \
-                         output format: make the question-answer pairs in JSON format, with the question as the key and the answer as the value."""
+                         output format: make the question-answer pairs in JSON format, with the question as the key and the answer as the value.\
+                        Don't include the system prompt in the output, Don't write any Code, just write the question-answer pairs in JSON format.
+                            """
         
         # Format messages for the LLM
         messages = [
@@ -98,34 +103,37 @@ def batch_process_analysis_files(directory_path: Union[str, Path]) -> Dict[str, 
     
     return results
 
-# Example usage
-if __name__ == "__main__":
-    
-    model_id = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+
+@hydra.main(config_path="config", config_name="generate_VQA")
+def main(cfg: DictConfig):
+    # Initialize model pipeline with config parameters
     pipe = pipeline(
         "text-generation",
-        model=model_id,
-        torch_dtype=torch.bfloat16,
+        model=cfg.model.name,
+        torch_dtype=getattr(torch, cfg.model.dtype),
         device_map="auto",
-        model_kwargs={"cache_dir": "model_cache"}
+        model_kwargs={"cache_dir": cfg.model.cache_dir}
     )
         
-    # Process a directory of files
-    directory_path = "/export/home/werbya/VLA/vqa_dataset/clip3_frames"
-    all_frames = batch_process_analysis_files(directory_path)
+    # Process input directory from config
+    all_frames = batch_process_analysis_files(cfg.data.input_dir)
     
     # Generate questions for each frame and save the results as JSON
     for frame_name, messages in all_frames.items():
         for message in messages:
             prompt = message['content']
-            response = pipe(prompt, max_length=1000)[0]['generated_text']
+            response = pipe(prompt, max_length=cfg.generation.max_length)[0]['generated_text']
             message['response'] = response
             
         # Save the generated questions
-        output_file = Path(directory_path) / f"{frame_name}_questions.json"
+        output_file = Path(cfg.data.output_dir) / Path(cfg.data.input_dir).name
+        os.makedirs(output_file, exist_ok=True)
+        output_file /= f"{frame_name}_questions.json"
+        # find the json part of the output response and write it to the output file
         with open(output_file, 'w') as f:
-            json.dump(messages, f, indent=2)
-            logger.info(f"Saved generated questions for frame {frame_name} to {output_file}")
-            
+            json.dump(messages, f, indent=1)
+        logger.info(f"Generated questions for frame {frame_name}. Saved to {output_file}")
 
+if __name__ == "__main__":
+    main()
 
