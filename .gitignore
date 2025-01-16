@@ -4,3 +4,5 @@ data/
 model_cache/
 captions/
 VQA_dataset*/
+wandb/
+llama*/

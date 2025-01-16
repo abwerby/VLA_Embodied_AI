@@ -95,6 +95,12 @@ def batch_process_analysis_files(directory_path: Union[str, Path]) -> Dict[str, 
             results[frame_name] = messages    
     return results
 
+def clean_response(response: str) -> str:
+    # check if the end of the response is not '}'
+    if response[-1] != '}':
+        # add the missing '}'
+        response += '}'
+    return response
 
 @hydra.main(config_path="config", config_name="generate_VQA")
 def main(cfg: DictConfig):
@@ -139,11 +145,12 @@ def main(cfg: DictConfig):
         response = response[0]["generated_text"].split(
             "<|start_header_id|>assistant<|end_header_id|>"
         )[1]
+        response = clean_response(response)
         # Save the generated questions
         output_file = Path(cfg.data.output_dir) / Path(cfg.data.input_dir).name
         os.makedirs(output_file, exist_ok=True)
         output_file /= f"{frame_name}_questions.json"
-        res = {"frame_name": frame_name, "captions": messages[1]['content'], "questions": response}
+        res = {"frame_name": frame_name, "captions": messages[1]['content'], "questions": json.loads(response)}
         with open(output_file, 'w') as f:
             json.dump(res, f, indent=4)
 
