@@ -1,6 +1,6 @@
 image_folder: "/export/home/werbya/VLA_Embodied_AI/data/clip3_frames"
 start_frame: 1600
-end_frame: 1700
+end_frame: 1610
 
 vlm_model:
   name: "Salesforce/xgen-mm-phi3-mini-instruct-r-v1"

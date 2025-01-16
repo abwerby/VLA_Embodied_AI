@@ -7,3 +7,4 @@ captions/
 VQA_dataset*/
 wandb/
 llama*/
+output/

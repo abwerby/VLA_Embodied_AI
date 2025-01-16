@@ -12,23 +12,38 @@ from generate_captions import VisionAnalyzer
 from vlm_processor import VLMProcessor, ModelConfig
 from generate_vqa import parse_frame_analysis
 import cv2
-import json
+import imageio
+
+def save_video(video, filename, save_dir, fps=10):
+    os.makedirs(save_dir, exist_ok=True)
+    wide_list = video
+
+    # Prepare the video file path
+    save_path = save_dir + '/' + filename
+
+    # Create a writer object
+    video_writer = imageio.get_writer(save_path, fps=fps)
+
+    # Write frames to the video file
+    for frame in wide_list[2:-1]:
+        video_writer.append_data(frame)
+
+    video_writer.close()
+
+    print(f"Video saved to {save_path}")
 
 def merge_scene_descriptions(data):
     """
-    Parse JSON string and merge all responses into a comprehensive scene description.
-    
+    Parse list of scene descriptions and merge them into a single string
     Args:
-        json_string (str): JSON string containing image information and captions
-        
+        data (list): List of scene descriptions
     Returns:
         str: Merged description of the scene
     """    
     # Extract all responses
     caption = ""
     for i in range(len(data)):    
-        for query, response in data[i].items():
-            caption += response + " "
+        caption += data[i]['response'] + " "
     return caption
 
 
@@ -62,14 +77,31 @@ def main(cfg: DictConfig):
         Answer the following questions."""
 
     # loop through all images get the captions and detections then ask questions to the llama model
+    question = "What is the loader should do next?"
+    imgs = []
     for image_path in image_paths:
         loguru.logger.info(f"Processing image: {image_path}")
-        img = (Image.open(image_path)).convert('RGB')
-        # cv2.imshow('image', cv2.imread(str(image_path)))
-        # cv2.waitKey(1)
-        results = vlm.generate_captions(img, cfg.vlm_model.queries)
+        img1 = (Image.open(image_path)).convert('RGB')
+        # write the question to the image with white color
+        img = cv2.imread(str(image_path))
+        cv2.putText(img, question, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        results = vlm.generate_captions(img1, cfg.vlm_model.queries)
         caption = merge_scene_descriptions(results)
-        print(caption)
+        response = llama_inference.generate_response(
+            instruction=system_instruction,
+            user_message= caption + " " + question,
+            max_new_tokens=150
+            )
+        print("\n ------------------------------------------ \n")
+        print(response)
+        print("\n ------------------------------------------ \n")
+        # write the response to the image with green color
+        cv2.putText(img, response, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        imgs.append(img)
+        # cv2.imshow('image', img)
+        # cv2.waitKey(1)
+    cv2.destroyAllWindows()
+    save_video(imgs, "demo", "output")
 
 if __name__ == "__main__":
     main()
