@@ -2,7 +2,7 @@ image_folder: "/export/home/werbya/VLA_Embodied_AI/data/clip3_frames"
 start_frame: 1600
 end_frame: 1700
 output: 
-  dir: "captions"
+  dir: "captions1"
   save_visualizations: False
 
 vlm_model:

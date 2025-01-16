@@ -203,26 +203,10 @@ def main():
     loguru.logger.info(f"Training completed")
 
     # Save the model
-    trainer.save_model(new_model)
+    trainer.model.save_pretrained(new_model)
     loguru.logger.info(f"Model saved to {new_model}")
 
     wandb.finish()
-
-    # # Test the model
-    # messages = [
-    #                 {"role": "system", "content": sys_instruction},
-    #                 {"role": "user", "content": dataset[85]["captions"] + " " + "what should the loader do now?"},
-    #             ]
-
-    # prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        
-    # inputs = tokenizer(prompt, return_tensors='pt', padding=True, truncation=True).to("cuda")
-
-    # outputs = model.generate(**inputs, max_new_tokens=150, num_return_sequences=1)
-
-    # text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-    # print(text.split("assistant")[1])
 
 if __name__ == "__main__":
     main()

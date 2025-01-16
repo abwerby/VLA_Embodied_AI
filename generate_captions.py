@@ -18,6 +18,8 @@ import logging
 import hydra
 from omegaconf import DictConfig
 import os
+from ov_object_detector import ObjectDetector, DetectorConfig
+from vlm_processor import VLMProcessor
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,131 +28,6 @@ logger = logging.getLogger(__name__)
 class ModelConfig:
     name: str
     cache_dir: str
-
-@dataclass
-class DetectorConfig(ModelConfig):
-    confidence_threshold: float
-    target_classes: List[str]
-
-class EosListStoppingCriteria(StoppingCriteria):
-    def __init__(self, eos_sequence: List[int] = [32007]):
-        self.eos_sequence = eos_sequence
-
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
-        last_ids = input_ids[:, -len(self.eos_sequence):].tolist()
-        return self.eos_sequence in last_ids
-
-class ObjectDetector:
-    def __init__(self, config: DetectorConfig):
-        self.config = config
-        self._initialize_model()
-
-    def _initialize_model(self):
-        logger.info(f"Loading object detector from {self.config.name}")
-        self.processor = OwlViTProcessor.from_pretrained(
-            self.config.name,
-            cache_dir=self.config.cache_dir
-        )
-        self.model = OwlViTForObjectDetection.from_pretrained(
-            self.config.name,
-            cache_dir=self.config.cache_dir
-        ).cuda()
-
-    def detect_objects(self, image: Image.Image) -> Dict[str, Any]:
-        """Detect objects in the image"""
-        texts = [self.config.target_classes]
-        texts = [[str(t) for t in texts[0]]]
-        inputs = self.processor(text=texts, images=image, return_tensors="pt")
-        inputs = {k: v.cuda() if isinstance(v, torch.Tensor) else v for k, v in inputs.items()}
-        
-        outputs = self.model(**inputs)
-        target_sizes = torch.Tensor([image.size[::-1]]).cuda()
-        
-        results = self.processor.post_process_object_detection(
-            outputs=outputs,
-            threshold=self.config.confidence_threshold,
-            target_sizes=target_sizes
-        )
-        
-        detections = []
-        for box, score, label in zip(results[0]["boxes"], results[0]["scores"], results[0]["labels"]):
-            box = [round(i, 2) for i in box.tolist()]
-            detections.append({
-                "object": list(self.config.target_classes)[label.item()],
-                "confidence": round(score.item(), 3),
-                "bbox": box
-            })
-        
-        return detections
-
-class VLMProcessor:
-    def __init__(self, model_config: ModelConfig):
-        self.model_config = model_config
-        self._initialize_models()
-
-    def _initialize_models(self):
-        """Initialize the VLM models and processors"""
-        logger.info(f"Loading VLM from {self.model_config.name}")
-        self.model = AutoModelForVision2Seq.from_pretrained(
-            self.model_config.name,
-            trust_remote_code=True,
-            cache_dir=self.model_config.cache_dir
-        ).cuda()
-        
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_config.name,
-            trust_remote_code=True,
-            use_fast=False,
-            legacy=False
-        )
-        
-        self.image_processor = AutoImageProcessor.from_pretrained(
-            self.model_config.name,
-            trust_remote_code=True
-        )
-        
-        self.tokenizer = self.model.update_special_tokens(self.tokenizer)
-
-    def generate_captions(self, image: Image.Image, queries: List[str]) -> List[Dict[str, str]]:
-        """Generate captions for the image based on queries"""
-        results = []
-        for query in queries:
-            inputs = self.image_processor([image], return_tensors="pt", image_aspect_ratio='anyres')
-            prompt = self.apply_prompt_template(query)
-            language_inputs = self.tokenizer([prompt], return_tensors="pt")
-            inputs.update(language_inputs)
-            inputs = {name: tensor.cuda() for name, tensor in inputs.items()}
-            
-            generated_text = self.model.generate(
-                **inputs,
-                image_size=[image.size],
-                pad_token_id=self.tokenizer.pad_token_id,
-                do_sample=False,
-                max_new_tokens=768,
-                top_p=None,
-                num_beams=1,
-                stopping_criteria=[EosListStoppingCriteria()]
-            )
-            
-            prediction = self.tokenizer.decode(
-                generated_text[0],
-                skip_special_tokens=True
-            ).split("<|end|>")[0]
-            
-            results.append({
-                "query": query,
-                "response": prediction
-            })
-        
-        return results
-
-    @staticmethod
-    def apply_prompt_template(prompt: str) -> str:
-        return (
-            '<|system|>\nA chat between a curious user and an artificial intelligence assistant. '
-            "The assistant gives helpful, detailed, and polite answers to the user's questions.<|end|>\n"
-            f'<|user|>\n<image>\n{prompt}<|end|>\n<|assistant|>\n'
-        )
 
 class VisionAnalyzer:
     def __init__(self, cfg: DictConfig):
