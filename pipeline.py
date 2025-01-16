@@ -1,5 +1,3 @@
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 from PIL import Image
 import loguru
 import hydra
@@ -59,7 +57,7 @@ def main(cfg: DictConfig):
     else:
         image_paths = image_paths[cfg.start_frame:]
 
-    # Initialize analyzer
+    # Initialize analyzer Couldn't fit in my GPU
     # analyzer = VisionAnalyzer(cfg)
     vlm = VLMProcessor(ModelConfig(
             name=cfg.vlm_model.name,
@@ -84,6 +82,7 @@ def main(cfg: DictConfig):
         img1 = (Image.open(image_path)).convert('RGB')
         # write the question to the image with white color
         img = cv2.imread(str(image_path))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         cv2.putText(img, question, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         results = vlm.generate_captions(img1, cfg.vlm_model.queries)
         caption = merge_scene_descriptions(results)
@@ -101,7 +100,7 @@ def main(cfg: DictConfig):
         # cv2.imshow('image', img)
         # cv2.waitKey(1)
     cv2.destroyAllWindows()
-    save_video(imgs, "demo", "output")
+    save_video(imgs, "demo.mp4", "output", fps=1)
 
 if __name__ == "__main__":
     main()

@@ -1,10 +1,12 @@
 # Visual Language Analysis for Construction Equipment
 
 This project provides a pipeline to control wheel loader using visual language models and large language models.
+```
+Disclaimer: This solution is experimental and far from prefect. It is just a proof of concept.
+```
 
 ## Main Steps in my Solution
 
-NOTE: This solution is a simplified version and far from perfect. It is just a proof of concept. I will proivde some tips to improve the solution in the end.
 
 1. Download the video from the online source (e.g., YouTube) using the `yt-dlp` tool.
 2. Extract frames from the video using the `extract_video_frames.py` script, with a specified interval to avoid redundancy.
@@ -18,7 +20,7 @@ NOTE: This solution is a simplified version and far from perfect. It is just a p
     (This script reads the frames, generates captions and detects objects, prompts the fine-tuned Llama model to get the answers).
 
 ## Tips to Improve the Solution (Future Work)
-1. The open vocab object detection model is weak and not suitable for the construction domain. as it can't detect classes like `pile`, `pile of sand`, `wheel loader`, etc.\
+<!-- 1. The open vocab object detection model is weak and not suitable for the construction domain. as it can't detect classes like `pile`, `pile of sand`, `wheel loader`, etc.\
     So, you can use a more powerful closed object detection model like YOLO, etc. and fine-tune it on the construction domain dataset.
 2. The visual language model is not perfect and can't generate accurate captions.\
     I used the XGen-mini-MM-Phi3 model, and it couldn't detect and classify the ruuning operation of the wheel loader (e.g., `loading`, `unloading`, `moving`, etc.).
@@ -26,7 +28,27 @@ NOTE: This solution is a simplified version and far from perfect. It is just a p
 4. Extracting frames from the video is not the best way to get the frames, as it may cause redundancy.\
     You can use feature extraction models like `xFeat`, `SuperGlue`, etc. to make sure that you get frames with different features/actions.\
     Also, a good VLM (expensive) can help in where to extract the frames.
-    
+     -->
+###  Object Detection Accuracy
+The open vocab object detection model is weak and not suitable for the construction domain. as it can't detect classes like `pile`, `pile of sand`, `wheel loader`, etc. So, you can use a more powerful closed object detection model like YOLO, etc. and fine-tune it on the construction domain dataset.
+
+### Better Captioning
+The visual language model is not perfect and can't generate accurate captions.\
+I used the XGen-mini-MM-Phi3 model, and it couldn't detect and classify the ruuning operation of the wheel loader (e.g., `loading`, `unloading`, `moving`, etc.).
+
+### Data Quality & Consistency
+In general I didn't invset time in cleaning the data or making sure that it make sense to fine-tune to take informed decisions.\
+Garbage in, garbage out!
+
+### LLM Fine-Tuning
+Extracting frames from the video is not the best way to get the frames, as it may cause redundancy.\
+You can use feature extraction models like `xFeat`, `SuperGlue`, etc. to make sure that you get frames with different features/actions.\
+Also, a good VLM (expensive) can help in where to extract the frames.
+
+### Performance & Real-Time Constraints
+Running the pipeline in real-time on a job site requires hardware acceleration and quintzation.
+Recommendation: use Quantized models, TensorRT.
+
 ## Quick Start
 
 ### 1. Configuration
