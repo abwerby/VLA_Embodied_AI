@@ -42,8 +42,9 @@ class VisionAnalyzer:
             confidence_threshold=cfg.detector_model.confidence_threshold,
             target_classes=cfg.detector_model.target_classes
         ))
-        self.output_dir = Path(cfg.output.dir) / Path(cfg.image_folder).stem
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        if cfg.get("output", None) is not None:
+            self.output_dir = Path(cfg.output.dir) / Path(cfg.image_folder).stem
+            self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def analyze_image(self, image_path: Path) -> Dict[str, Any]:
         """Analyze a single image with both VLM and object detection"""
