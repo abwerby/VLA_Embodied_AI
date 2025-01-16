@@ -1,5 +1,5 @@
 import torch
-from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 import json
 import os
 from pathlib import Path
@@ -7,6 +7,8 @@ from typing import Dict, List, Union
 import logging
 import hydra
 from omegaconf import DictConfig
+from tqdm import tqdm
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -97,20 +99,46 @@ def batch_process_analysis_files(directory_path: Union[str, Path]) -> Dict[str, 
 @hydra.main(config_path="config", config_name="generate_VQA")
 def main(cfg: DictConfig):
     # Initialize model pipeline with config parameters
+    tokenizer = AutoTokenizer.from_pretrained(cfg.model.name)
+
+    model = AutoModelForCausalLM.from_pretrained(
+        cfg.model.name,
+        return_dict=True,
+        low_cpu_mem_usage=True,
+        torch_dtype=torch.float16,
+        device_map="auto",
+        trust_remote_code=True,
+        cache_dir=cfg.model.cache_dir
+    )
+
+    # Set pad_token_id
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+    if model.config.pad_token_id is None:
+        model.config.pad_token_id = model.config.eos_token_id
+
+    # Initialize the pipeline
     pipe = pipeline(
         "text-generation",
-        model=cfg.model.name,
-        torch_dtype=getattr(torch, cfg.model.dtype),
+        model=model,
+        tokenizer=tokenizer,
+        torch_dtype=torch.float16,
         device_map="auto",
-        model_kwargs={"cache_dir": cfg.model.cache_dir}
     )
-        
+
     # Process input directory from config
     all_frames = batch_process_analysis_files(cfg.data.input_dir)
     
     # Generate questions for each frame and save the results as JSON
-    for frame_name, messages in all_frames.items():
-        response = pipe(messages, max_length=cfg.generation.max_length)[0]['generated_text'][-1]
+    # NOTE: This could be parallelized with batch processing
+    for frame_name, messages in tqdm(all_frames.items()):
+        prompt = tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        response = pipe(prompt, max_length=cfg.generation.max_length, do_sample=True)
+        response = response[0]["generated_text"].split(
+            "<|start_header_id|>assistant<|end_header_id|>"
+        )[1]
         # Save the generated questions
         output_file = Path(cfg.data.output_dir) / Path(cfg.data.input_dir).name
         os.makedirs(output_file, exist_ok=True)

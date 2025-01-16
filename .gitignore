@@ -3,4 +3,4 @@
 data/
 model_cache/
 captions/
-VQA_dataset/
+VQA_dataset*/
