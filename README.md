@@ -1,4 +1,4 @@
-# Visual Language Analysis for Construction Equipment
+# Visual Language Action for Construction Equipment
 
 This project provides a pipeline to control wheel loader using visual language models and large language models.
 ```
